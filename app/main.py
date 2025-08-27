@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
-import asyncio
 from pydantic import BaseModel
+import asyncio
 
 app = FastAPI()
 store = {}
-store_lock = asyncio.Lock()
+store_lock = asyncio.Lock()  # safe within a single process
 
 class Item(BaseModel):
     key: str
@@ -12,8 +12,10 @@ class Item(BaseModel):
 
 @app.post("/api/v1/store", status_code=201)
 async def set_item(item: Item):
-    store[item.key] = item.value
+    async with store_lock:
+        store[item.key] = item.value
     return {"message": "Item set successfully"}
+
 @app.get("/api/v1/store/{key}")
 async def get_item(key: str):
     if key not in store:
